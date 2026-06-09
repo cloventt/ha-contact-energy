@@ -127,7 +127,7 @@ class ContactEnergyUsageSensor(SensorEntity):
         if self._api._api_token:
             _LOGGER.debug("We appear to be logged in (lets not verify it for now)")
         else:
-            _LOGGER.info("Havent logged in yet, lets login now...")
+            _LOGGER.info("Haven't logged in yet, lets login now...")
             if self._api.login() is False:
                 _LOGGER.error(
                     "Failed to get past login (usage will not be updated) - check the username and password are valid"

@@ -107,13 +107,13 @@ class ContactEnergyApi:
             data = response.json()
             if not data:
                 _LOGGER.info(
-                    "Fetched usage data for %s/%s/%s, but got nothing back",
+                    "Fetched usage data for %s-%s-%s, but got nothing back",
                     year,
                     month,
                     day,
                 )
             return data
         else:
-            _LOGGER.error("Failed to fetch usage data for %s/%s/%s", year, month, day)
+            _LOGGER.error("Failed to fetch usage data for %s-%s-%s", year, month, day)
             _LOGGER.debug(response)
             return False
