@@ -146,9 +146,9 @@ class ContactEnergyUsageSensor(SensorEntity):
 
         for i in range(self._usage_days):
             previous_day = today - timedelta(days=self._usage_days - i)
-            response = self._api.get_usage(
-                str(previous_day.year), str(previous_day.month), str(previous_day.day)
-            )
+            target_date = previous_day.isoformat()[:10]
+            _LOGGER.debug("Fetching usage data for %s", target_date)
+            response = self._api.get_usage(target_date)
             if response and response[0]:
                 for point in response:
                     if point["value"]:
@@ -177,6 +177,7 @@ class ContactEnergyUsageSensor(SensorEntity):
                                 sum=kWhRunningSum,
                             )
                         )
+            _LOGGER.debug("Finished fetching usage data for %s", target_date)
 
         kWhMetadata = StatisticMetaData(
             mean_type=StatisticMeanType.NONE,

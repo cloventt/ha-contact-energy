@@ -79,10 +79,9 @@ class ContactEnergyApi:
             _LOGGER.error("Failed to fetch customer accounts %s", result.text)
             return False
 
-    def get_usage(self, year, month, day):
+    def get_usage(self, target_date: str):
         """Update our usage data."""
         headers = {"x-api-key": self._api_key, "authorization": self._api_token}
-        target_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
         response = requests.post(
             self._url_base
             + f"/usage/v2/{self._contractId}"
