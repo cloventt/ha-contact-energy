@@ -17,6 +17,10 @@ from homeassistant.components.recorder.statistics import (
 
 from .api import ContactEnergyApi
 
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
 from .const import (
     DOMAIN,
     SENSOR_USAGE_NAME,
@@ -46,6 +50,22 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 )
 
 SCAN_INTERVAL = timedelta(hours=3)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up Contact Energy sensors from a config entry."""
+    data = hass.data[DOMAIN][entry.entry_id]
+    email = data[CONF_EMAIL]
+    password = data[CONF_PASSWORD]
+    usage_days = data.get(CONF_USAGE_DAYS, 10)
+
+    api = ContactEnergyApi(email, password)
+    sensors = [ContactEnergyUsageSensor(SENSOR_USAGE_NAME, api, usage_days)]
+    async_add_entities(sensors, True)
 
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
@@ -175,7 +195,7 @@ class ContactEnergyUsageSensor(SensorEntity):
                         )
             _LOGGER.debug("Finished fetching usage data for %s", target_date)
 
-        _LOGGER.info("Finished fetching usage data, total of %f.2 kWh recorded (%d datapoints)", kWhRunningSum, len(kWhStatistics))
+        _LOGGER.info("Finished fetching usage data, total of %.2f kWh recorded (%d datapoints)", kWhRunningSum, len(kWhStatistics))
         kWhMetadata = StatisticMetaData(
             mean_type=StatisticMeanType.NONE,
             has_sum=True,
