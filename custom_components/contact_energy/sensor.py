@@ -187,6 +187,7 @@ class ContactEnergyUsageSensor(SensorEntity):
             source=DOMAIN,
             statistic_id=f"{DOMAIN}:energy_consumption",
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+            unit_class="energy",
         )
         async_add_external_statistics(self.hass, kWhMetadata, kWhStatistics)
 
@@ -197,5 +198,6 @@ class ContactEnergyUsageSensor(SensorEntity):
             statistic_id=f"{DOMAIN}:free_energy_consumption",
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
             mean_type=StatisticMeanType.NONE,
+            unit_class="energy",
         )
         async_add_external_statistics(self.hass, freeKWHMetadata, freeKWhStatistics)
