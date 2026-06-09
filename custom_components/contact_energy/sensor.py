@@ -139,17 +139,16 @@ class ContactEnergyUsageSensor(SensorEntity):
         _LOGGER.debug("Fetching usage data")
 
         kWhStatistics = []
-        kWhRunningSum = 0
+        kWhRunningSum = 0.0
 
         freeKWhStatistics = []
-        freeKWhRunningSum = 0
+        freeKWhRunningSum = 0.0
 
         for i in range(self._usage_days):
             previous_day = today - timedelta(days=self._usage_days - i)
             target_date = previous_day.isoformat()[:10]
             _LOGGER.debug("Fetching usage data for %s", target_date)
             response = self._api.get_usage(target_date)
-            _LOGGER.debug("Retrieved usage data for %s: %s", target_date, response)
             if response and response[0]:
                 for point in response:
                     if point["value"]:
@@ -157,7 +156,9 @@ class ContactEnergyUsageSensor(SensorEntity):
                         # HASSIO statistics requires us to add values as a sum of all previous values.
 
                         kWhRunningSum = kWhRunningSum + float(point["value"])
-                        freeKWhRunningSum = kWhRunningSum + float(point["unchargedValue"])
+                        freeKWhRunningSum = freeKWhRunningSum + float(point["unchargedValue"])
+
+                        _LOGGER.debug("Adding %d.2 from %s", float(point["value"]), point["date"])
 
                         freeKWhStatistics.append(
                             StatisticData(
