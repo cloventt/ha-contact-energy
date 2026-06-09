@@ -149,6 +149,7 @@ class ContactEnergyUsageSensor(SensorEntity):
             target_date = previous_day.isoformat()[:10]
             _LOGGER.debug("Fetching usage data for %s", target_date)
             response = self._api.get_usage(target_date)
+            _LOGGER.debug("Retrieved usage data for %s: %s", target_date, response)
             if response and response[0]:
                 for point in response:
                     if point["value"]:

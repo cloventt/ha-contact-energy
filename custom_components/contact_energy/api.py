@@ -93,6 +93,7 @@ class ContactEnergyApi:
             timeout=10,  # set a timeout in case their API hangs
         )
         if response.status_code == requests.codes.ok:
+            _LOGGER.debug(response)
             data = response.json()
             if not data:
                 _LOGGER.info("Fetched usage data for %s, but got nothing back", target_date)
