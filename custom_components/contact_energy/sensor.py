@@ -155,12 +155,9 @@ class ContactEnergyUsageSensor(SensorEntity):
                     if point["value"]:
                         # If the off peak value is '0.00' then the energy is free.
                         # HASSIO statistics requires us to add values as a sum of all previous values.
-                        if point["offpeakValue"] == "0.00":
-                            kWhRunningSum = kWhRunningSum + float(point["value"])
-                        else:
-                            freeKWhRunningSum = freeKWhRunningSum + float(
-                                point["value"]
-                            )
+
+                        kWhRunningSum = kWhRunningSum + float(point["value"])
+                        freeKWhRunningSum = kWhRunningSum + float(point["unchargedValue"])
 
                         freeKWhStatistics.append(
                             StatisticData(
