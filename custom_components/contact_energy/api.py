@@ -91,6 +91,7 @@ class ContactEnergyApi:
               f"&from={target_date}"
               f"&to={target_date}",
             headers=headers,
+            timeout=10,  # set a timeout in case their API hangs
         )
         if response.status_code == requests.codes.ok:
             data = response.json()
