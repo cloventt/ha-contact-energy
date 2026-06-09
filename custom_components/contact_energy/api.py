@@ -82,38 +82,22 @@ class ContactEnergyApi:
     def get_usage(self, year, month, day):
         """Update our usage data."""
         headers = {"x-api-key": self._api_key, "authorization": self._api_token}
+        target_date = f"{year}-{month.zfill(2)}-{day.zfill(2)}"
         response = requests.post(
             self._url_base
-            + "/usage/v2/"
-            + self._contractId
-            + "?ba="
-            + self._accountId
-            + "&interval=hourly&from="
-            + year
-            + "-"
-            + (month.zfill(2))
-            + "-"
-            + (day.zfill(2))
-            + "&to="
-            + year
-            + "-"
-            + (month.zfill(2))
-            + "-"
-            + (day.zfill(2)),
+            + f"/usage/v2/{self._contractId}"
+            + f"?ba={self._accountId}"
+               "&interval=hourly"
+              f"&from={target_date}"
+              f"&to={target_date}",
             headers=headers,
         )
-        data = {}
         if response.status_code == requests.codes.ok:
             data = response.json()
             if not data:
-                _LOGGER.info(
-                    "Fetched usage data for %s-%s-%s, but got nothing back",
-                    year,
-                    month,
-                    day,
-                )
+                _LOGGER.info("Fetched usage data for %s, but got nothing back", target_date)
             return data
         else:
-            _LOGGER.error("Failed to fetch usage data for %s-%s-%s", year, month, day)
+            _LOGGER.error("Failed to fetch usage data for %s", target_date)
             _LOGGER.debug(response)
             return False
