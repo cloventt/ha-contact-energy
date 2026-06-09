@@ -139,22 +139,21 @@ class ContactEnergyUsageSensor(SensorEntity):
         """Return the unique id."""
         return self._unique_id
 
-    def update(self):
+    async def async_update(self):
         """Begin usage update."""
         _LOGGER.debug("Beginning usage update")
 
-        # Check to see if our API Token is valid
         if self._api._api_token:
             _LOGGER.debug("We appear to be logged in (lets not verify it for now)")
         else:
             _LOGGER.info("Haven't logged in yet, lets login now...")
-            if self._api.login() is False:
+            result = await self.hass.async_add_executor_job(self._api.login)
+            if result is False:
                 _LOGGER.error(
                     "Failed to get past login (usage will not be updated) - check the username and password are valid"
                 )
-                return False
+                return
 
-        # Get todays date
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
         _LOGGER.debug("Fetching usage data")
 
@@ -168,12 +167,10 @@ class ContactEnergyUsageSensor(SensorEntity):
             previous_day = today - timedelta(days=self._usage_days - i)
             target_date = previous_day.isoformat()[:10]
             _LOGGER.debug("Fetching usage data for %s", target_date)
-            response = self._api.get_usage(target_date)
+            response = await self.hass.async_add_executor_job(self._api.get_usage, target_date)
             if response and response[0]:
                 for point in response:
                     if point["value"]:
-                        # HASSIO statistics requires us to add values as a sum of all previous values.
-
                         kWhRunningSum = kWhRunningSum + float(point["value"])
                         freeKWhRunningSum = freeKWhRunningSum + float(point["unchargedValue"])
 
