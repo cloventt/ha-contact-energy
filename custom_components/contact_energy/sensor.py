@@ -152,13 +152,10 @@ class ContactEnergyUsageSensor(SensorEntity):
             if response and response[0]:
                 for point in response:
                     if point["value"]:
-                        # If the off peak value is '0.00' then the energy is free.
                         # HASSIO statistics requires us to add values as a sum of all previous values.
 
                         kWhRunningSum = kWhRunningSum + float(point["value"])
                         freeKWhRunningSum = freeKWhRunningSum + float(point["unchargedValue"])
-
-                        _LOGGER.debug("Adding %d.2 from %s", float(point["value"]), point["date"])
 
                         freeKWhStatistics.append(
                             StatisticData(
@@ -178,6 +175,7 @@ class ContactEnergyUsageSensor(SensorEntity):
                         )
             _LOGGER.debug("Finished fetching usage data for %s", target_date)
 
+        _LOGGER.info("Finished fetching usage data, total of %f.2 kWh recorded (%d datapoints)", kWhRunningSum, len(kWhStatistics))
         kWhMetadata = StatisticMetaData(
             mean_type=StatisticMeanType.NONE,
             has_sum=True,
@@ -199,3 +197,4 @@ class ContactEnergyUsageSensor(SensorEntity):
             unit_class="energy",
         )
         async_add_external_statistics(self.hass, freeKWHMetadata, freeKWhStatistics)
+        _LOGGER.debug("Finished usage update")
