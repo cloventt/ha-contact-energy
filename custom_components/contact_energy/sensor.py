@@ -10,7 +10,7 @@ from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, UnitOfEnergy
 from homeassistant.components.sensor import SensorEntity
 
-from homeassistant.components.recorder.models import StatisticData, StatisticMetaData
+from homeassistant.components.recorder.models import StatisticData, StatisticMetaData, StatisticMeanType
 from homeassistant.components.recorder.statistics import (
     async_add_external_statistics,
 )
@@ -24,7 +24,7 @@ from .const import (
 )
 
 NAME = DOMAIN
-ISSUEURL = "https://github.com/codyc1515/hacs_contact_energy/issues"
+ISSUEURL = "https://github.com/cloventt/hacs_contact_energy/issues"
 
 STARTUP = f"""
 -------------------------------------------------------------------
@@ -59,8 +59,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 
     _LOGGER.debug("Setting up sensor(s)...")
 
-    sensors = []
-    sensors.append(ContactEnergyUsageSensor(SENSOR_USAGE_NAME, api, usage_days))
+    sensors = [ContactEnergyUsageSensor(SENSOR_USAGE_NAME, api, usage_days)]
     async_add_entities(sensors, True)
 
 
@@ -180,7 +179,7 @@ class ContactEnergyUsageSensor(SensorEntity):
                         )
 
         kWhMetadata = StatisticMetaData(
-            has_mean=False,
+            mean_type=StatisticMeanType.NONE,
             has_sum=True,
             name="ContactEnergy",
             source=DOMAIN,
@@ -190,11 +189,11 @@ class ContactEnergyUsageSensor(SensorEntity):
         async_add_external_statistics(self.hass, kWhMetadata, kWhStatistics)
 
         freeKWHMetadata = StatisticMetaData(
-            has_mean=False,
             has_sum=True,
             name="FreeContactEnergy",
             source=DOMAIN,
             statistic_id=f"{DOMAIN}:free_energy_consumption",
             unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+            mean_type=StatisticMeanType.NONE,
         )
         async_add_external_statistics(self.hass, freeKWHMetadata, freeKWhStatistics)
