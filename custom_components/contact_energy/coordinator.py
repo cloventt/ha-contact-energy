@@ -8,7 +8,11 @@ from homeassistant.components.recorder.models import (
     StatisticMetaData,
     StatisticMeanType,
 )
-from homeassistant.components.recorder.statistics import async_add_external_statistics
+from homeassistant.components.recorder import get_instance
+from homeassistant.components.recorder.statistics import (
+    async_add_external_statistics,
+    get_last_statistics,
+)
 from homeassistant.const import UnitOfEnergy
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -17,6 +21,9 @@ from .api import ContactEnergyApi
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+KWH_STATISTIC_ID = f"{DOMAIN}:energy_consumption"
+FREE_KWH_STATISTIC_ID = f"{DOMAIN}:free_energy_consumption"
 
 
 class ContactEnergyCoordinator(DataUpdateCoordinator):
@@ -32,35 +39,49 @@ class ContactEnergyCoordinator(DataUpdateCoordinator):
         self._api = api
         self._usage_days = usage_days
 
+    async def _async_last_sum(self, statistic_id: str) -> float:
+        """Look up the last recorded cumulative sum for a statistic so new data continues from it."""
+        last_stats = await get_instance(self.hass).async_add_executor_job(
+            get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
+        )
+        stats = last_stats.get(statistic_id)
+        if stats:
+            return stats[0]["sum"] or 0.0
+        return 0.0
+
     async def _async_update_data(self) -> dict:
         _LOGGER.debug("Beginning usage update")
 
-        if not self._api._api_token:
-            _LOGGER.info("Not logged in, logging in now...")
-            result = await self.hass.async_add_executor_job(self._api.login)
-            if not result:
-                raise UpdateFailed("Login failed — check credentials")
+        # The Contact Energy session token is short-lived, so log in fresh every
+        # update rather than only once — otherwise every call 401s after the
+        # token expires and we silently stop getting data.
+        _LOGGER.debug("Logging in...")
+        result = await self.hass.async_add_executor_job(self._api.login)
+        if not result:
+            raise UpdateFailed("Login failed — check credentials")
 
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         kwh_statistics = []
-        kwh_running_sum = 0.0
+        kwh_running_sum = await self._async_last_sum(KWH_STATISTIC_ID)
         free_kwh_statistics = []
-        free_kwh_running_sum = 0.0
+        free_kwh_running_sum = await self._async_last_sum(FREE_KWH_STATISTIC_ID)
 
         for i in range(self._usage_days):
             previous_day = today - timedelta(days=self._usage_days - i)
             target_date = previous_day.isoformat()[:10]
             _LOGGER.debug("Fetching usage data for %s", target_date)
             response = await self.hass.async_add_executor_job(self._api.get_usage, target_date)
-            if response and response[0]:
-                for point in response:
-                    if point["value"]:
-                        kwh_running_sum += float(point["value"])
-                        free_kwh_running_sum += float(point["unchargedValue"])
-                        start = datetime.strptime(point["date"], "%Y-%m-%dT%H:%M:%S.%f%z")
-                        kwh_statistics.append(StatisticData(start=start, sum=kwh_running_sum))
-                        free_kwh_statistics.append(StatisticData(start=start, sum=free_kwh_running_sum))
+            if not response:
+                _LOGGER.warning("No usage data returned for %s", target_date)
+                continue
+            for point in response:
+                if point["value"]:
+                    kwh_running_sum += float(point["value"])
+                    free_kwh_running_sum += float(point["unchargedValue"])
+                    start = datetime.strptime(point["date"], "%Y-%m-%dT%H:%M:%S.%f%z")
+                    kwh_statistics.append(StatisticData(start=start, sum=kwh_running_sum))
+                    free_kwh_statistics.append(StatisticData(start=start, sum=free_kwh_running_sum))
 
         _LOGGER.info(
             "Fetched usage data: %.2f kWh (%d datapoints)",

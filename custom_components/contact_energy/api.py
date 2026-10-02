@@ -36,7 +36,7 @@ class ContactEnergyApi:
             result = True
         else:
             _LOGGER.error(
-                "Failed to login - check the username and password are valid",
+                "Failed to login - check the username and password are valid: %s",
                 loginResult.text,
             )
             return False
@@ -58,7 +58,7 @@ class ContactEnergyApi:
             result = True
         else:
             _LOGGER.error(
-                "Failed to refresh session - check the username and password are valid",
+                "Failed to refresh session - check the username and password are valid: %s",
                 loginResult.text,
             )
             return False
@@ -98,6 +98,10 @@ class ContactEnergyApi:
                 _LOGGER.info("Fetched usage data for %s, but got nothing back", target_date)
             return data
         else:
-            _LOGGER.error("Failed to fetch usage data for %s", target_date)
-            _LOGGER.debug(response)
+            _LOGGER.error(
+                "Failed to fetch usage data for %s: %s %s",
+                target_date,
+                response.status_code,
+                response.text,
+            )
             return False
