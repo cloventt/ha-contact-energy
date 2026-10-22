@@ -39,15 +39,15 @@ class ContactEnergyCoordinator(DataUpdateCoordinator):
         self._api = api
         self._usage_days = usage_days
 
-    async def _async_last_sum(self, statistic_id: str) -> float:
-        """Look up the last recorded cumulative sum for a statistic so new data continues from it."""
+    async def _async_last_stat(self, statistic_id: str) -> tuple[float, float]:
+        """Return (start timestamp, cumulative sum) of the last recorded statistic, so new data continues from it."""
         last_stats = await get_instance(self.hass).async_add_executor_job(
             get_last_statistics, self.hass, 1, statistic_id, True, {"sum"}
         )
         stats = last_stats.get(statistic_id)
         if stats:
-            return stats[0]["sum"] or 0.0
-        return 0.0
+            return stats[0]["start"], stats[0]["sum"] or 0.0
+        return 0.0, 0.0
 
     async def _async_update_data(self) -> dict:
         _LOGGER.debug("Beginning usage update")
@@ -63,9 +63,9 @@ class ContactEnergyCoordinator(DataUpdateCoordinator):
         today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
 
         kwh_statistics = []
-        kwh_running_sum = await self._async_last_sum(KWH_STATISTIC_ID)
+        last_start, kwh_running_sum = await self._async_last_stat(KWH_STATISTIC_ID)
         free_kwh_statistics = []
-        free_kwh_running_sum = await self._async_last_sum(FREE_KWH_STATISTIC_ID)
+        _, free_kwh_running_sum = await self._async_last_stat(FREE_KWH_STATISTIC_ID)
 
         for i in range(self._usage_days):
             previous_day = today - timedelta(days=self._usage_days - i)
@@ -76,10 +76,12 @@ class ContactEnergyCoordinator(DataUpdateCoordinator):
                 _LOGGER.warning("No usage data returned for %s", target_date)
                 continue
             for point in response:
-                if point["value"]:
+                start = datetime.strptime(point["date"], "%Y-%m-%dT%H:%M:%S.%f%z")
+                # The window overlaps previous updates; only add hours we haven't
+                # recorded yet, otherwise the cumulative sum double-counts them.
+                if point["value"] and start.timestamp() > last_start:
                     kwh_running_sum += float(point["value"])
                     free_kwh_running_sum += float(point["unchargedValue"])
-                    start = datetime.strptime(point["date"], "%Y-%m-%dT%H:%M:%S.%f%z")
                     kwh_statistics.append(StatisticData(start=start, sum=kwh_running_sum))
                     free_kwh_statistics.append(StatisticData(start=start, sum=free_kwh_running_sum))
 
